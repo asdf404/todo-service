@@ -1,0 +1,10 @@
+FROM node:10.11.0-alpine
+
+VOLUME /service
+WORKDIR /service
+
+ENTRYPOINT ["/service/entrypoint.sh"]
+
+EXPOSE 8080
+USER 1000:1000
+CMD ["npm", "start"]

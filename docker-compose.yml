@@ -1,0 +1,71 @@
+version: '3'
+
+services:
+  nginx:
+    image: test-todo/nginx:latest
+    # only for dev
+    build: ./nginx
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      default:
+        aliases:
+          - ${DOMAIN_NAME}
+  postgres:
+    image: postgres:10.5
+    restart: always
+    environment:
+      POSTGRES_USER: todo
+      POSTGRES_PASSWORD: todo
+      POSTGRES_DB: todo
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - default
+  backend:
+    image: test-todo/backend-service:latest
+    # only for dev
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    # only for dev
+    volumes:
+      - ./backend:/service
+    restart: always
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      DOMAIN_NAME: ${DOMAIN_NAME}
+      POSTGRES_URL: postgres://todo:todo@postgres/todo
+
+      JWT_SECRET: ${JWT_SECRET}
+
+      # owner credentials
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      - postgres
+    networks:
+      - default
+  frontend:
+    image: test-todo/frontend-renderer:latest
+    # only for dev
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    # only for dev
+    volumes:
+      - ./frontend:/service
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      DOMAIN_NAME: ${DOMAIN_NAME}
+
+networks:
+  default: {}

@@ -1,0 +1,80 @@
+image: docker
+
+variables:
+  REDIS_URL: redis://redis
+  MYSQL_URL: mysql://dankotesters:dankotesters@mysql/dankotesters
+  NODE_ENV: testing
+  JWT_SECRET: secret
+  MYSQL_DATABASE: dankotesters
+  MYSQL_USER: dankotesters
+  MYSQL_PASSWORD: dankotesters
+  MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+
+stages:
+- setup
+- lint
+- test
+- build
+
+setup:
+  stage: setup
+  image: node:9.10.0-alpine
+  cache:
+    untracked: true
+    key: "$CI_BUILD_REF_NAME"
+    paths:
+      - node_modules/
+  only:
+    - master
+    - develop
+    - /^feature-.*$/
+  script:
+    - npm install
+
+lint:
+  stage: lint
+  image: node:9.10.0-alpine
+  cache:
+    untracked: true
+    key: "$CI_BUILD_REF_NAME"
+    paths:
+      - node_modules/
+    policy: pull
+  only:
+    - master
+    - develop
+    - /^feature-.*$/
+  script:
+    - npm run lint
+
+test:
+  stage: test
+  image: node:9.10.0-alpine
+  services:
+    - redis:4.0-alpine
+    - mariadb:10.2
+  cache:
+    untracked: true
+    key: "$CI_BUILD_REF_NAME"
+    paths:
+      - node_modules/
+    policy: pull
+  only:
+    - master
+    - develop
+    - /^feature-.*$/
+  script:
+    - npm run migrate
+    - npm test
+
+build_image:
+  stage: build
+  services:
+  - docker:dind
+  only:
+  - tags
+  script:
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD reg.testdlab.com
+  - docker build -t $CI_REGISTRY_IMAGE:latest -t $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG .
+  - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG
+  - docker push $CI_REGISTRY_IMAGE:latest
